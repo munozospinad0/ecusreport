@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daniel Muñoz — Dashboard ECUS Agency</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --bg:#0a0e1a;--bg2:#0f1426;--surface:#161c33;--surface2:#1d2540;
+            --accent:#6d28d9;--accent2:#8b5cf6;--accent3:#a78bfa;
+            --teal:#10b981;--teal-d:rgba(16,185,129,.12);
+            --orange:#f59e0b;--orange-d:rgba(245,158,11,.12);
+            --red:#ef4444;--red-d:rgba(239,68,68,.12);
+            --blue:#3b82f6;--blue-d:rgba(59,130,246,.12);
+            --pink:#ec4899;--pink-d:rgba(236,72,153,.12);
+            --t1:#f1f5f9;--t2:#94a3b8;--t3:#64748b;
+            --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.10);
+        }
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--t1);line-height:1.65;font-size:13.5px;min-height:100vh}
+        .page{max-width:1180px;margin:0 auto;padding:0 24px 60px}
+
+        /* ── HEADER ── */
+        .header{padding:36px 0 28px;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--b1);margin-bottom:32px;gap:24px;flex-wrap:wrap}
+        .header-left h1{font-size:1.5rem;font-weight:800;letter-spacing:-.5px;background:linear-gradient(135deg,#fff,var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .header-left .sub{font-size:.8rem;color:var(--t2);margin-top:2px}
+        .header-right{text-align:right}
+        .header-right .client{font-size:.95rem;font-weight:700;color:var(--accent3)}
+        .header-right .period{font-size:.78rem;color:var(--t3);margin-top:2px}
+        .header-badge{display:inline-block;background:linear-gradient(135deg,var(--accent),var(--blue));padding:4px 14px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;box-shadow:0 4px 20px rgba(109,40,217,.3)}
+        .live-dot{display:inline-block;width:8px;height:8px;background:var(--teal);border-radius:50%;margin-right:6px;animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(16,185,129,.7)}50%{opacity:.7;box-shadow:0 0 0 8px rgba(16,185,129,0)}}
+        .live-tag{font-size:.7rem;color:var(--teal);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+
+        /* ── KPI GRID ── */
+        .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:32px}
+        @media(max-width:1000px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+        @media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+        .kpi-card{background:var(--surface);border:1px solid var(--b1);border-radius:14px;padding:18px 16px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;cursor:default}
+        .kpi-card:hover{transform:translateY(-3px);border-color:var(--b2)}
+        .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;opacity:.8}
+        .kpi-card.purple::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+        .kpi-card.teal::before{background:linear-gradient(90deg,var(--teal),#34d399)}
+        .kpi-card.blue::before{background:linear-gradient(90deg,var(--blue),#60a5fa)}
+        .kpi-card.orange::before{background:linear-gradient(90deg,var(--orange),#fbbf24)}
+        .kpi-card.pink::before{background:linear-gradient(90deg,var(--pink),#f472b6)}
+        .kpi-card.green::before{background:linear-gradient(90deg,#059669,#10b981)}
+        .kpi-label{font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:700;margin-bottom:8px}
+        .kpi-value{font-size:1.5rem;font-weight:800;color:var(--t1);line-height:1.1}
+        .kpi-value.editable{border-bottom:1px dashed transparent;cursor:text;outline:none;display:inline-block;transition:border-color .2s}
+        .kpi-value.editable:hover,.kpi-value.editable:focus{border-bottom-color:var(--b2)}
+        .kpi-sub{font-size:.7rem;color:var(--t3);margin-top:6px}
+        .kpi-icon{position:absolute;top:14px;right:14px;opacity:.2;font-size:1.2rem}
+
+        /* ── SECTION ── */
+        .section{margin-bottom:32px}
+        .section-head{font-size:1rem;font-weight:800;color:var(--t1);margin-bottom:4px;display:flex;align-items:center;gap:10px}
+        .section-head .dot{width:6px;height:24px;border-radius:3px;flex-shrink:0}
+        .dot.purple{background:var(--accent)}
+        .dot.teal{background:var(--teal)}
+        .dot.blue{background:var(--blue)}
+        .dot.orange{background:var(--orange)}
+        .dot.green{background:#059669}
+        .section-sub{font-size:.82rem;color:var(--t3);margin-bottom:18px;padding-left:16px}
+
+        /* ── CAMPAIGN TABLE ── */
+        .camp-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;border:1px solid var(--b1);font-size:.82rem;background:var(--surface)}
+        .camp-table thead th{background:var(--surface2);color:var(--t2);padding:12px 14px;text-align:left;font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--b2)}
+        .camp-table tbody td{padding:14px;border-bottom:1px solid var(--b1);color:var(--t2)}
+        .camp-table tbody tr:last-child td{border-bottom:none}
+        .camp-table tbody tr:hover td{background:rgba(255,255,255,.02)}
+        .camp-table .camp-name{font-weight:700;color:var(--t1);font-family:monospace;font-size:.78rem}
+        .camp-table .val{font-weight:700;color:var(--t1)}
+        .camp-table .good{color:var(--teal)}
+        .camp-table .warn{color:var(--orange)}
+        .camp-table .bad{color:var(--red)}
+        .camp-table .muted{color:var(--t3);font-style:italic}
+        .status-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:.3px}
+        .status-pill.active{background:var(--teal-d);color:var(--teal)}
+        .status-pill.pending{background:var(--orange-d);color:var(--orange)}
+
+        /* ── CHART GRID ── */
+        .chart-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px}
+        @media(max-width:900px){.chart-grid{grid-template-columns:1fr}}
+        .chart-box{background:var(--surface);border:1px solid var(--b1);border-radius:14px;padding:20px;position:relative}
+        .chart-box .chart-title{font-size:.85rem;font-weight:700;color:var(--t1);margin-bottom:4px}
+        .chart-box .chart-sub{font-size:.72rem;color:var(--t3);margin-bottom:14px}
+        .chart-wrap{position:relative;height:240px}
+
+        /* ── FUNNEL ── */
+        .funnel{background:var(--surface);border:1px solid var(--b1);border-radius:14px;padding:24px;margin-bottom:16px}
+        .funnel-title{font-size:.85rem;font-weight:700;color:var(--t1);margin-bottom:16px}
+        .funnel-stages{display:flex;align-items:stretch;gap:4px}
+        @media(max-width:700px){.funnel-stages{flex-direction:column}}
+        .funnel-stage{flex:1;padding:16px 12px;border-radius:10px;position:relative;text-align:center;color:#fff;transition:transform .2s}
+        .funnel-stage:hover{transform:translateY(-2px)}
+        .funnel-stage .fs-label{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;opacity:.85;font-weight:600;margin-bottom:4px}
+        .funnel-stage .fs-value{font-size:1.3rem;font-weight:800}
+        .funnel-stage .fs-rate{font-size:.7rem;opacity:.8;margin-top:4px}
+        .funnel-stage.s1{background:linear-gradient(135deg,var(--blue),#60a5fa)}
+        .funnel-stage.s2{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+        .funnel-stage.s3{background:linear-gradient(135deg,var(--pink),#f472b6)}
+        .funnel-stage.s4{background:linear-gradient(135deg,var(--orange),#fbbf24)}
+        .funnel-stage.s5{background:linear-gradient(135deg,#059669,var(--teal))}
+        .funnel-arrow{display:flex;align-items:center;color:var(--t3);font-size:1.2rem}
+
+        /* ── CONVERSION HIGHLIGHT ── */
+        .conv-card{background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(5,150,105,.05));border:1px solid rgba(16,185,129,.25);border-radius:16px;padding:28px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;position:relative;overflow:hidden}
+        @media(max-width:700px){.conv-card{grid-template-columns:1fr}}
+        .conv-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--teal),#059669)}
+        .conv-item{text-align:center}
+        .conv-item .ci-value{font-size:2rem;font-weight:800;color:var(--teal);line-height:1}
+        .conv-item .ci-label{font-size:.75rem;color:var(--t2);margin-top:4px;font-weight:500}
+        .conv-divider{width:1px;background:rgba(16,185,129,.15)}
+        @media(max-width:700px){.conv-divider{display:none}}
+
+        /* ── INSIGHTS ── */
+        .insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        @media(max-width:700px){.insight-grid{grid-template-columns:1fr}}
+        .insight-card{background:var(--surface);border:1px solid var(--b1);border-radius:12px;padding:18px 20px;border-left:3px solid var(--accent);transition:border-left-color .2s}
+        .insight-card.green{border-left-color:var(--teal)}
+        .insight-card.orange{border-left-color:var(--orange)}
+        .insight-card.blue{border-left-color:var(--blue)}
+        .insight-card.red{border-left-color:var(--red)}
+        .insight-card strong{font-size:.85rem;color:var(--t1);display:block;margin-bottom:6px}
+        .insight-card p{font-size:.8rem;color:var(--t2)}
+        .insight-card .editable-insight{cursor:text;outline:none;display:block;min-height:20px}
+
+        /* ── NEXT STEPS ── */
+        .next-list{list-style:none}
+        .next-list li{font-size:.82rem;color:var(--t2);padding:12px 16px;background:var(--surface);border-radius:10px;border:1px solid var(--b1);margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:transform .2s,border-color .2s}
+        .next-list li:hover{transform:translateX(4px);border-color:var(--b2)}
+        .next-list .next-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;font-weight:800}
+        .next-icon.todo{background:var(--blue-d);color:var(--blue)}
+        .next-icon.done{background:var(--teal-d);color:var(--teal)}
+        .next-icon.warn{background:var(--orange-d);color:var(--orange)}
+
+        /* ── FOOTER ── */
+        .footer{padding:32px 0;text-align:center;border-top:1px solid var(--b1);margin-top:20px}
+        .footer .name{font-size:.9rem;font-weight:800;color:var(--accent3);margin-bottom:4px}
+        .footer p{font-size:.72rem;color:var(--t3)}
+
+        /* ── DOWNLOAD BTN ── */
+        .download-bar{position:fixed;bottom:24px;right:24px;z-index:999}
+        .dl-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;font-weight:700;padding:14px 26px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 8px 32px rgba(109,40,217,.4);transition:transform .2s,box-shadow .2s}
+        .dl-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(109,40,217,.5)}
+
+        /* ── EDIT INDICATOR ── */
+        [contenteditable="true"]:hover{background:rgba(139,92,246,.05)}
+        [contenteditable="true"]:focus{background:rgba(139,92,246,.1);border-radius:4px;outline:1px dashed var(--accent2)}
+
+        /* ── PRINT ── */
+        @media print{
+            body{background:#fff!important;color:#000!important}
+            .page{padding:0 10px;max-width:100%}
+            .download-bar{display:none!important}
+            .kpi-card,.chart-box,.insight-card,.camp-table,.funnel,.conv-card,.next-list li{background:#f8f9fb!important;color:#1a1535!important;border-color:#ddd!important}
+            .kpi-value,.header-left h1,.section-head,.camp-name,.val,.chart-title,.funnel-title,.insight-card strong{color:#1a1535!important}
+            .kpi-label,.sub,.period,.chart-sub,.section-sub,.camp-table tbody td,.insight-card p,.next-list li,.footer p{color:#525073!important}
+            .header-left h1{background:none!important;-webkit-text-fill-color:#3B2D8F!important}
+            .section{page-break-inside:avoid}
+        }
+    </style>
+</head>
+<body>
+
+<div class="page">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-left">
+            <div class="header-badge"><span class="live-dot"></span><span class="live-tag">Dashboard en vivo</span></div>
+            <h1>Daniel Muñoz</h1>
+            <p class="sub">Media Buying & Automatización · Reporte de campaña</p>
+        </div>
+        <div class="header-right">
+            <div class="client" contenteditable="true">ECUS Agency</div>
+            <div class="period" contenteditable="true">Periodo: 16 — 20 Abril 2026 · 5 días</div>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+        <div class="kpi-card purple">
+            <div class="kpi-label">Inversión</div>
+            <div class="kpi-value editable" data-count="27.66" data-prefix="$" data-decimals="2" contenteditable="true">$27.66</div>
+            <div class="kpi-sub">USD invertidos</div>
+        </div>
+        <div class="kpi-card teal">
+            <div class="kpi-label">Alcance</div>
+            <div class="kpi-value editable" data-count="17500" contenteditable="true">17,500</div>
+            <div class="kpi-sub">personas únicas</div>
+        </div>
+        <div class="kpi-card blue">
+            <div class="kpi-label">Impresiones</div>
+            <div class="kpi-value editable" data-count="27988" contenteditable="true">27,988</div>
+            <div class="kpi-sub">veces mostrado</div>
+        </div>
+        <div class="kpi-card orange">
+            <div class="kpi-label">Leads</div>
+            <div class="kpi-value editable" data-count="6" contenteditable="true">6</div>
+            <div class="kpi-sub">formularios completados</div>
+        </div>
+        <div class="kpi-card pink">
+            <div class="kpi-label">CPL</div>
+            <div class="kpi-value editable" data-count="3.32" data-prefix="$" data-decimals="2" contenteditable="true">$3.32</div>
+            <div class="kpi-sub">costo por lead</div>
+        </div>
+        <div class="kpi-card green">
+            <div class="kpi-label">Ventas cerradas</div>
+            <div class="kpi-value editable" data-count="1" contenteditable="true">1</div>
+            <div class="kpi-sub" contenteditable="true">close rate 16.7%</div>
+        </div>
+    </div>
+
+    <!-- CONVERSION HIGHLIGHT -->
+    <div class="section">
+        <div class="section-head"><span class="dot green"></span> Conversión del embudo</div>
+        <div class="section-sub">El primer resultado de negocio ya está confirmado.</div>
+        <div class="conv-card">
+            <div class="conv-item">
+                <div class="ci-value" contenteditable="true">6</div>
+                <div class="ci-label">Leads generados</div>
+            </div>
+            <div class="conv-divider"></div>
+            <div class="conv-item">
+                <div class="ci-value" contenteditable="true">1</div>
+                <div class="ci-label">Venta cerrada</div>
+            </div>
+            <div class="conv-divider"></div>
+            <div class="conv-item">
+                <div class="ci-value" contenteditable="true">16.7%</div>
+                <div class="ci-label">Close rate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FUNNEL -->
+    <div class="section">
+        <div class="section-head"><span class="dot blue"></span> Embudo de conversión</div>
+        <div class="section-sub">El recorrido desde que se muestra el anuncio hasta que se cierra una venta.</div>
+        <div class="funnel">
+            <div class="funnel-stages">
+                <div class="funnel-stage s1">
+                    <div class="fs-label">Alcance</div>
+                    <div class="fs-value">17,500</div>
+                    <div class="fs-rate">personas</div>
+                </div>
+                <div class="funnel-stage s2">
+                    <div class="fs-label">Impresiones</div>
+                    <div class="fs-value">27,988</div>
+                    <div class="fs-rate">1.6 por persona</div>
+                </div>
+                <div class="funnel-stage s3">
+                    <div class="fs-label">Clics estimados</div>
+                    <div class="fs-value" contenteditable="true">~140</div>
+                    <div class="fs-rate">≈ 0.5% CTR</div>
+                </div>
+                <div class="funnel-stage s4">
+                    <div class="fs-label">Leads</div>
+                    <div class="fs-value">6</div>
+                    <div class="fs-rate">~4.3% de clics</div>
+                </div>
+                <div class="funnel-stage s5">
+                    <div class="fs-label">Ventas</div>
+                    <div class="fs-value">1</div>
+                    <div class="fs-rate">16.7% de leads</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CAMPAIGN TABLE -->
+    <div class="section">
+        <div class="section-head"><span class="dot purple"></span> Rendimiento por campaña</div>
+        <div class="section-sub">Detalle de las dos campañas con consumo en el periodo.</div>
+
+        <table class="camp-table">
+            <thead>
+                <tr>
+                    <th>Campaña</th>
+                    <th>Objetivo</th>
+                    <th>Estado</th>
+                    <th>Inversión</th>
+                    <th>Alcance</th>
+                    <th>Impresiones</th>
+                    <th>Resultado</th>
+                    <th>Costo/resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="camp-name">Ecus_meta_cpl_abril_2026</td>
+                    <td>Leads (IF)</td>
+                    <td><span class="status-pill active">Activa</span></td>
+                    <td class="val" contenteditable="true">$19.95</td>
+                    <td contenteditable="true">1,277</td>
+                    <td contenteditable="true">2,402</td>
+                    <td class="val" contenteditable="true">6 leads</td>
+                    <td class="good val" contenteditable="true">$3.32</td>
+                </tr>
+                <tr>
+                    <td class="camp-name">Ecus_meta_cpm_abril_2026</td>
+                    <td>Alcance</td>
+                    <td><span class="status-pill active">Activa</span></td>
+                    <td class="val" contenteditable="true">$7.71</td>
+                    <td contenteditable="true">17,261</td>
+                    <td contenteditable="true">25,586</td>
+                    <td class="val" contenteditable="true">17,261 personas</td>
+                    <td class="good val" contenteditable="true">$0.45 CPM</td>
+                </tr>
+                <tr>
+                    <td class="camp-name">Ecus_meta_rmk_abril_2026</td>
+                    <td>RMK / LAL</td>
+                    <td><span class="status-pill pending">Pendiente</span></td>
+                    <td class="muted">—</td>
+                    <td class="muted">—</td>
+                    <td class="muted">—</td>
+                    <td class="muted">Sin consumo aún</td>
+                    <td class="muted">—</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="section">
+        <div class="section-head"><span class="dot teal"></span> Visualización de datos</div>
+        <div class="section-sub">Distribución del presupuesto y comparativa entre campañas activas.</div>
+        <div class="chart-grid">
+            <div class="chart-box">
+                <div class="chart-title">Alcance vs. Impresiones por campaña</div>
+                <div class="chart-sub">Cuántas personas únicas viste y cuántas veces se mostró el anuncio.</div>
+                <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title">Distribución de inversión</div>
+                <div class="chart-sub">Cómo se repartieron los $27.66 del periodo.</div>
+                <div class="chart-wrap"><canvas id="chartDonut"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="section">
+        <div class="section-head"><span class="dot orange"></span> Observaciones del periodo</div>
+        <div class="section-sub">Lo que leemos de estos primeros 5 días de campaña.</div>
+
+        <div class="insight-grid">
+            <div class="insight-card green">
+                <strong>El CPL está muy por debajo de lo proyectado</strong>
+                <div class="editable-insight" contenteditable="true">Proyectamos $7-$14 por lead en el arranque y estamos generando leads a $3.32. Eso dice dos cosas: la segmentación está bien afinada y los creativos están conectando con la audiencia correcta.</div>
+            </div>
+            <div class="insight-card">
+                <strong>Primer lead convertido en venta</strong>
+                <div class="editable-insight" contenteditable="true">De los 6 leads que llegaron, 1 ya cerró negocio con ECUS. Un 16.7% de close rate en la primera semana es una señal fuerte de que los leads que están entrando son gente real con intención, no curiosos.</div>
+            </div>
+            <div class="insight-card blue">
+                <strong>La campaña de alcance está rindiendo muy barato</strong>
+                <div class="editable-insight" contenteditable="true">$0.45 de CPM es un costo bajísimo para Panamá. Con solo $7.71 impactamos a 17,261 personas únicas. Esto también alimenta la audiencia de remarketing que vamos a activar pronto.</div>
+            </div>
+            <div class="insight-card orange">
+                <strong>La campaña de RMK aún no ha consumido</strong>
+                <div class="editable-insight" contenteditable="true">No tiene movimiento todavía. Hay que revisar la configuración o activarla manualmente. Tiene sentido esperar un poco más para que la base de remarketing crezca antes de escalarla.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEXT STEPS -->
+    <div class="section">
+        <div class="section-head"><span class="dot purple"></span> Próximos pasos</div>
+        <div class="section-sub">Ajustes y movimientos para la siguiente semana del mes.</div>
+
+        <ul class="next-list">
+            <li><span class="next-icon done">✓</span> <span contenteditable="true">Confirmar la venta cerrada con ECUS y pedir feedback sobre la calidad del lead</span></li>
+            <li><span class="next-icon todo">→</span> <span contenteditable="true">Revisar la campaña de RMK: verificar configuración y activarla si está correcta</span></li>
+            <li><span class="next-icon todo">→</span> <span contenteditable="true">Con el CPL tan bajo, evaluar subir el presupuesto diario de la campaña de leads</span></li>
+            <li><span class="next-icon todo">→</span> <span contenteditable="true">Analizar qué creativos están trayendo los leads que sí convierten</span></li>
+            <li><span class="next-icon warn">!</span> <span contenteditable="true">Seguir monitoreando día a día para no perder el ritmo — esta primera semana marca la base</span></li>
+        </ul>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p class="name">Daniel Muñoz</p>
+        <p>Media Buying & Automatización</p>
+        <p>munozospinad0@gmail.com · 3015478059</p>
+        <p style="margin-top:8px;font-size:.65rem;opacity:.5">Reporte actualizado al 20 de Abril de 2026</p>
+    </div>
+
+</div>
+
+<!-- DOWNLOAD -->
+<div class="download-bar">
+    <button class="dl-btn" onclick="window.print()">Descargar PDF</button>
+</div>
+
+<script>
+// Chart.js defaults
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.font.family = 'Plus Jakarta Sans, sans-serif';
+Chart.defaults.font.size = 11;
+
+// BAR CHART — Alcance vs Impresiones
+new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+        labels: ['Campaña CPL', 'Campaña CPM'],
+        datasets: [
+            {
+                label: 'Alcance',
+                data: [1277, 17261],
+                backgroundColor: 'rgba(109, 40, 217, 0.8)',
+                borderRadius: 8,
+                borderSkipped: false,
+            },
+            {
+                label: 'Impresiones',
+                data: [2402, 25586],
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderRadius: 8,
+                borderSkipped: false,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {position: 'bottom', labels: {boxWidth: 12, padding: 12}},
+            tooltip: {
+                backgroundColor: '#1d2540',
+                titleColor: '#f1f5f9',
+                bodyColor: '#94a3b8',
+                borderColor: 'rgba(255,255,255,.1)',
+                borderWidth: 1,
+                padding: 12,
+                displayColors: true,
+                callbacks: {
+                    label: function(ctx) {
+                        return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {color: 'rgba(255,255,255,.05)'},
+                ticks: {callback: v => v.toLocaleString()}
+            },
+            x: {
+                grid: {display: false}
+            }
+        }
+    }
+});
+
+// DONUT — Distribución de inversión
+new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Campaña CPL ($19.95)', 'Campaña CPM ($7.71)'],
+        datasets: [{
+            data: [19.95, 7.71],
+            backgroundColor: [
+                'rgba(109, 40, 217, 0.9)',
+                'rgba(16, 185, 129, 0.9)',
+            ],
+            borderColor: '#161c33',
+            borderWidth: 3,
+            hoverOffset: 12
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+            legend: {position: 'bottom', labels: {boxWidth: 12, padding: 12}},
+            tooltip: {
+                backgroundColor: '#1d2540',
+                titleColor: '#f1f5f9',
+                bodyColor: '#94a3b8',
+                borderColor: 'rgba(255,255,255,.1)',
+                borderWidth: 1,
+                padding: 12,
+                callbacks: {
+                    label: function(ctx) {
+                        const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                        const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                        return ctx.label + ' · ' + pct + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Counter animation
+document.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseFloat(el.dataset.count);
+    const prefix = el.dataset.prefix || '';
+    const decimals = parseInt(el.dataset.decimals) || 0;
+    const duration = 1200;
+    const start = performance.now();
+    const initial = 0;
+
+    function animate(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = initial + (target - initial) * eased;
+        const formatted = decimals > 0 ? current.toFixed(decimals) : Math.round(current).toLocaleString();
+        el.textContent = prefix + formatted;
+        if (progress < 1) requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+});
+</script>
+
+</body>
+</html>
